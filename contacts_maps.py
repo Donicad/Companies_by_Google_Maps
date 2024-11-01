@@ -1,9 +1,7 @@
 import os
-import openpyxl
 from openpyxl import Workbook
 from datetime import datetime
 import requests
-import re
 import time
 from tqdm import tqdm
 
