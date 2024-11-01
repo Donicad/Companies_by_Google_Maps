@@ -1,36 +1,29 @@
 import os
-from openpyxl import Workbook
+import time
 from datetime import datetime
 import requests
-import time
+from openpyxl import Workbook
 from tqdm import tqdm
 
-
 class CustCalculator:
-    
     def __init__(self):
         self.credit = 200
         self.geo_cust = 0.005
         self.places_cust = 0.032
-        
+
     def calcular_gastos(self, places_requests, geocoding_requests):
         total_geocoding_cost = geocoding_requests * self.geo_cust
         total_places_cost = places_requests * self.places_cust
         total_cost = total_geocoding_cost + total_places_cost
-        
         remaining_credits = self.credit - total_cost
-        
         return total_cost, remaining_credits
-    
+
     def calculator(self):
         places_requests = int(input("Quantas requisições da API Place foi Realizada: "))
         geocoding_requests = int(input("Quantas requisições da API Geocoding foi Realizada: "))
-        
         total_cost, remaining_credits = self.calcular_gastos(places_requests, geocoding_requests)
-        
         print(f"Gasto Total: R$ {total_cost:.2f}")
         print(f"Créditos Restantes: R$ {remaining_credits:.2f}")
-
 
 def limpar_terminal():
     """Limpa o terminal para uma nova exibição."""
@@ -38,28 +31,26 @@ def limpar_terminal():
 
 class APIKeyManager:
     """Gerencia a API_KEY: permite salvar, editar e excluir."""
-    
     def __init__(self):
         self.api_key = self.load_api_key()
-        
     def load_api_key(self):
         """Carrega a API_KEY se existir"""
         if os.path.exists("api_key.txt"):
             with open("api_key.txt", "r") as file:
                 return file.read().strip()
         return None
-    
+
     def save_api_key(self, key):
         """Salva a API_KEY"""
         with open("api_key.txt", "w") as file:
             file.write(key)
         self.api_key = key
-    
+
     def edit_api_key(self):
         """Edita a API_KEY"""
         new_key = input("Digite a nova API_KEY: ")
         self.save_api_key(new_key)
-        
+
     def delete_api_key(self):
         """Deleta a API_KEY"""
         if os.path.exists("api_key.txt"):
@@ -68,7 +59,6 @@ class APIKeyManager:
 
 class EmpresaBusca:
     """Realiza a busca de empresas com a API do Google Places."""
-    
     def __init__(self, api_key):
         self.api_key = api_key
 
@@ -82,10 +72,7 @@ class EmpresaBusca:
             if resultados:
                 location = resultados[0].get("geometry").get("location")
                 return location.get("lat"), location.get("lng")
-            else:
-                return None, None
-        else:
-            return None, None
+        return None, None
 
     def buscar_empresas(self, lat, lng, keyword, radius=50000, limite_empresas=200):
         """Busca empresas por coordenadas."""
@@ -97,7 +84,6 @@ class EmpresaBusca:
             "key": self.api_key
         }
         detalhes_empresas = []
-        
         with tqdm(total=limite_empresas, desc="Buscando empresas") as pbar:
             while True:
                 response = requests.get(url, params=params)
@@ -108,10 +94,8 @@ class EmpresaBusca:
                         pbar.update(1)
                         if len(detalhes_empresas) >= limite_empresas:
                             break
-                    
                     if len(detalhes_empresas) >= limite_empresas:
                         break
-                    
                     next_page_token = response.json().get("next_page_token")
                     if next_page_token:
                         params["pagetoken"] = next_page_token
@@ -120,15 +104,18 @@ class EmpresaBusca:
                         break
                 else:
                     return None
-        
         return detalhes_empresas
-    
+
     def obter_detalhes_empresa(self, place_id):
         """Obtém detalhes da empresa pelo place_id."""
         url = "https://maps.googleapis.com/maps/api/place/details/json"
         params = {
             "place_id": place_id,
-            "fields": "name,formatted_address,opening_hours,formatted_phone_number,website,place_id",
+            "fields": """name,
+                        formatted_address,
+                        opening_hours,
+                        formatted_phone_number
+                        ,website,place_id""",
             "key": self.api_key
         }
         response = requests.get(url, params=params)
@@ -145,15 +132,15 @@ class EmpresaBusca:
                 "horario_funcionamento": horario_funcionamento_str,
                 "telefone": telefone,
                 "site": site,
-                "status": "Aberto" if detalhes.get("opening_hours", {}).get("open_now") else "Fechado",
+                "status": "Aberto"
+                if detalhes.get("opening_hours", {}).get("open_now")
+                else "Fechado",
                 "url_google_maps": url_google_maps,
             }
-        else:
-            return {}
+        return {}
 
 class EmpresaCLI:
     """Interface CLI principal com menu de opções"""
-    
     def __init__(self):
         self.api_manager = APIKeyManager()
         self.calculadora = CustCalculator()
@@ -167,7 +154,6 @@ class EmpresaCLI:
             print("3 - Configurações")
             print("4 - Sair")
             opcao = input("Escolha uma opção: ")
-
             if opcao == "1":
                 self.buscar_empresas()
             elif opcao == "2":
@@ -180,23 +166,24 @@ class EmpresaCLI:
                 break
             else:
                 print("Opção inválida. Tente novamente.")
-    
+
     def buscar_empresas(self):
         limpar_terminal()
         if not self.api_manager.api_key:
             print("Nenhuma API_KEY Encontrada.")
             input("Pressione Enter para voltar ao menu...")
             return
-        
         cidade = input("Digite um nome de cidade: ")
         radius = int(input("Digite o raio de busca (em metros : limite - 50.000m): "))
         keyword = input("Digite o termo de pesquisa: ")
-
         empresa_busca = EmpresaBusca(self.api_manager.api_key)
         lat, lng = empresa_busca.coodernadas(cidade)
-        
         if lat and lng:
-            empresas = empresa_busca.buscar_empresas(lat, lng, keyword, radius=radius, limite_empresas=200)
+            empresas = empresa_busca.buscar_empresas(lat,
+                                                     lng,
+                                                     keyword,
+                                                     radius=radius,
+                                                     limite_empresas=200)
             if empresas:
                 nome_arquivo = f"empresas_maps_{cidade}_{datetime.now().date()}.xlsx"
                 self.salvar_planilha(empresas, nome_arquivo)
@@ -207,7 +194,11 @@ class EmpresaCLI:
         workbook = Workbook()
         sheet = workbook.active
         sheet.title = "Empresas"
-        headers = ["Nome", "Endereço Completo", "Horário de Funcionamento", "Telefone", "Site", "Status", "URL Google Maps"]
+        headers = ["Nome",
+                   "Endereço Completo",
+                   "Horário de Funcionamento",
+                   "Telefone", "Site", "Status",
+                   "URL Google Maps"]
         sheet.append(headers)
         for empresa in dados:
             sheet.append([
@@ -220,7 +211,7 @@ class EmpresaCLI:
                 empresa["url_google_maps"]
             ])
         workbook.save(nome_arquivo)
-    
+
     def configuracoes(self):
         limpar_terminal()
         print("Configurações")
@@ -230,7 +221,6 @@ class EmpresaCLI:
         print("4 - Deletar API_KEY")
         print("5 - Voltar ao menu")
         opcao = input("Escolha uma opção: ")
-        
         if opcao == "1":
             nova_chave = input("Digite a nova API_KEY: ")
             self.api_manager.save_api_key(nova_chave)
@@ -239,7 +229,6 @@ class EmpresaCLI:
         elif opcao == "2":
             print(f"API_KEY: {self.api_manager.api_key}")
             input("Pressione Enter para voltar ao menu...")
-            
         elif opcao == "3":
             self.api_manager.edit_api_key()
             print("API_KEY editada com sucesso.")
@@ -253,9 +242,6 @@ class EmpresaCLI:
         else:
             print("Opção inválida. Tente novamente.")
             input("Pressione Enter para voltar ao menu...")
-
-
-
 
 if __name__ == "__main__":
     cli = EmpresaCLI()

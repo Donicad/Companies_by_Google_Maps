@@ -48,7 +48,7 @@ Agora espere todas as dependências serem instaladas.
 Após a instalação das dependências execute o código com o seguinte comando :
 
 ```
-     # Caso seu sistema operacional seja Linux, deverá utilizar "python3"
+    # Caso seu sistema operacional seja Linux, deverá utilizar "python3"
     python contacts_maps.py
 ```
 
