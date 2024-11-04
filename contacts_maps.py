@@ -19,11 +19,35 @@ class CustCalculator:
         return total_cost, remaining_credits
 
     def calculator(self):
-        places_requests = int(input("Quantas requisições da API Place foi Realizada: "))
-        geocoding_requests = int(input("Quantas requisições da API Geocoding foi Realizada: "))
-        total_cost, remaining_credits = self.calcular_gastos(places_requests, geocoding_requests)
-        print(f"Gasto Total: R$ {total_cost:.2f}")
-        print(f"Créditos Restantes: R$ {remaining_credits:.2f}")
+        try:
+            places_requests = input("Quantas requisições da API Place foi Realizada: ")
+            if not places_requests.isdigit():
+                print("Apenas números são aceitos.")
+                return
+            
+            places_requests = int(places_requests)
+            
+            if places_requests < 0:
+                print("Quantidade de requisições inválida. Tente novamente.")
+                return
+            
+            if places_requests == 0:
+                print("Nenhuma requisição foi realizada.")
+                return
+            
+            geocoding_requests = input("Quantas requisições da API Geocoding foi Realizada: ")
+            if not geocoding_requests.isdigit():
+                print("Apenas números são aceitos.")
+                return
+            
+            geocoding_requests = int(geocoding_requests)
+
+            total_cost, remaining_credits = self.calcular_gastos(places_requests, geocoding_requests)
+            print(f"Gasto Total: R$ {total_cost:.2f}")
+            print(f"Créditos Restantes: R$ {remaining_credits:.2f}")
+
+        except ValueError:
+            print("Entrada inválida. Tente novamente.")
 
 def limpar_terminal():
     """Limpa o terminal para uma nova exibição."""
